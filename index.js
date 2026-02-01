@@ -38,6 +38,26 @@ app.use('/api/vouchers', require('./routes/vouchers'));
 app.use('/api/reports', require('./routes/reports'));
 app.use('/api/users', require('./routes/users'));
 
+// Root endpoint - API information
+app.get('/', (req, res) => {
+  res.json({
+    service: 'NexKirana Accounting System API',
+    version: '1.0.0',
+    status: 'Running',
+    timestamp: new Date().toISOString(),
+    endpoints: {
+      health: '/api/health',
+      auth: '/api/auth',
+      companies: '/api/companies',
+      ledgers: '/api/ledgers',
+      vouchers: '/api/vouchers',
+      reports: '/api/reports',
+      users: '/api/users'
+    },
+    documentation: 'See README.md for complete API documentation'
+  });
+});
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({ 

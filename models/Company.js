@@ -72,7 +72,7 @@ const companySchema = new mongoose.Schema({
 });
 
 // Index for better query performance
-companySchema.index({ name: 1 });
+// Note: name field already has unique index from schema definition
 companySchema.index({ isActive: 1 });
 companySchema.index({ createdBy: 1 });
 
