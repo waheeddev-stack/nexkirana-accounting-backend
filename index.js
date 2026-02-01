@@ -60,17 +60,36 @@ app.get('/', (req, res) => {
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
+  const dbStatus = mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected';
   res.json({ 
     status: 'OK', 
     timestamp: new Date().toISOString(),
     service: 'NexKirana Accounting System',
-    version: '1.0.0'
+    version: '1.0.0',
+    database: dbStatus,
+    environment: process.env.NODE_ENV || 'development',
+    mongoUri: process.env.MONGODB_URI ? 'Set' : 'Not set'
   });
 });
 
 // Database connection with retry logic
 const connectDB = async () => {
   try {
+    // Check if MongoDB URI is defined
+    if (!process.env.MONGODB_URI) {
+      console.error('❌ MONGODB_URI environment variable is not defined!');
+      console.log('📋 Available environment variables:');
+      console.log('- NODE_ENV:', process.env.NODE_ENV);
+      console.log('- PORT:', process.env.PORT);
+      console.log('- JWT_SECRET:', process.env.JWT_SECRET ? 'Set' : 'Not set');
+      console.log('🔄 Retrying connection in 5 seconds...');
+      setTimeout(connectDB, 5000);
+      return;
+    }
+
+    console.log('🔄 Attempting MongoDB connection...');
+    console.log('📊 MongoDB URI:', process.env.MONGODB_URI.substring(0, 50) + '...');
+    
     const conn = await mongoose.connect(process.env.MONGODB_URI, {
       maxPoolSize: 10,
       serverSelectionTimeoutMS: 10000,
