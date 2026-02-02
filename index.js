@@ -6,11 +6,9 @@ const compression = require('compression');
 const morgan = require('morgan');
 require('dotenv').config();
 
-const securityMiddleware = require('./middleware/security');
-
 const app = express();
 
-// Trust proxy
+// Trust proxy for production deployment
 app.set('trust proxy', 1);
 
 // Compression middleware
@@ -23,12 +21,59 @@ if (process.env.NODE_ENV === 'production') {
   app.use(morgan('dev'));
 }
 
-// Security middleware
-securityMiddleware(app);
+// CORS configuration - Allow all origins for production
+app.use(cors({
+  origin: '*', // Explicitly allow all origins
+  credentials: false, // Set to false for wildcard origin
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'HEAD', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin', 'X-Forwarded-For'],
+  exposedHeaders: ['Content-Length', 'X-Foo', 'X-Bar'],
+  preflightContinue: false,
+  optionsSuccessStatus: 200
+}));
+
+// Security headers
+app.use(helmet({
+  contentSecurityPolicy: false, // Disable CSP for API
+  crossOriginEmbedderPolicy: false
+}));
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Additional headers for API
+app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, HEAD, PATCH');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin, X-Forwarded-For');
+  res.setHeader('Access-Control-Max-Age', '86400'); // 24 hours
+  res.setHeader('X-Powered-By', 'NexKirana API');
+  
+  // Handle preflight requests explicitly
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+  
+  next();
+});
+
+// Explicit OPTIONS handler for all routes
+app.options('*', (req, res) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, HEAD, PATCH');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin, X-Forwarded-For');
+  res.header('Access-Control-Max-Age', '86400');
+  res.sendStatus(200);
+});
+
+// Method not allowed handler (before routes)
+app.use((req, res, next) => {
+  // Log all requests for debugging
+  console.log(`📝 ${req.method} ${req.originalUrl} - ${new Date().toISOString()}`);
+  next();
+});
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));
@@ -126,10 +171,24 @@ app.use((err, req, res, next) => {
 
 // 404 handler
 app.use('*', (req, res) => {
+  // Log the request for debugging
+  console.log(`❌ 404 - ${req.method} ${req.originalUrl}`);
+  console.log('Headers:', req.headers);
+  
   res.status(404).json({ 
     message: 'Endpoint not found',
+    method: req.method,
     path: req.originalUrl,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    availableEndpoints: {
+      health: 'GET /api/health',
+      auth: 'POST /api/auth/login',
+      companies: 'GET /api/companies',
+      ledgers: 'GET /api/ledgers',
+      vouchers: 'GET /api/vouchers',
+      reports: 'GET /api/reports',
+      users: 'GET /api/users'
+    }
   });
 });
 
