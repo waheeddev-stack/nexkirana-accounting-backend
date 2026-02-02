@@ -97,6 +97,9 @@ app.use('/api/vouchers', require('./routes/vouchers'));
 app.use('/api/reports', require('./routes/reports'));
 app.use('/api/users', require('./routes/users'));
 
+// Temporary debug endpoint (REMOVE IN PRODUCTION)
+app.use('/api/debug', require('./debug-login-endpoint'));
+
 // Root endpoint - API information
 app.get('/', (req, res) => {
   res.json({
