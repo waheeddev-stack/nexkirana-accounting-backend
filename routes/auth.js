@@ -64,27 +64,22 @@ router.post('/register', [
 });
 
 // Login
-router.post('/login', [
-  body('email').isEmail().withMessage('Please provide a valid email'),
-  body('password').exists().withMessage('Password is required')
-], async (req, res) => {
+router.post('/login', async (req, res) => {
   try {
-    console.log('🔍 LOGIN ATTEMPT:', {
-      email: req.body.email,
-      hasPassword: !!req.body.password,
-      timestamp: new Date().toISOString()
-    });
-
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      console.log('❌ VALIDATION ERRORS:', errors.array());
-      return res.status(400).json({ errors: errors.array() });
-    }
-
+    console.log('🔍 LOGIN ATTEMPT - SIMPLIFIED VERSION');
+    console.log('Request body:', req.body);
+    
+    // Basic validation
     const { email, password } = req.body;
-
-    // Check if user exists and is active
+    
+    if (!email || !password) {
+      console.log('❌ MISSING EMAIL OR PASSWORD');
+      return res.status(400).json({ message: 'Email and password are required' });
+    }
+    
     console.log('🔍 SEARCHING FOR USER:', email);
+    
+    // Check if user exists and is active
     const user = await User.findOne({ email, isActive: true });
     
     if (!user) {
@@ -109,7 +104,7 @@ router.post('/login', [
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
-    console.log('✅ LOGIN SUCCESSFUL');
+    console.log('✅ LOGIN SUCCESSFUL - GENERATING TOKEN');
 
     // Update last login
     await user.updateLastLogin();
@@ -125,7 +120,7 @@ router.post('/login', [
       { expiresIn: process.env.JWT_EXPIRES_IN || '8h' }
     );
 
-    console.log('✅ TOKEN GENERATED');
+    console.log('✅ TOKEN GENERATED SUCCESSFULLY');
 
     res.json({
       token,
