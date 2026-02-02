@@ -120,14 +120,18 @@ app.get('/', (req, res) => {
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   const dbStatus = mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected';
+  const dbError = mongoose.connection.readyState === 99 ? 'Error' : null;
+  
   res.json({ 
     status: 'OK', 
     timestamp: new Date().toISOString(),
     service: 'NexKirana Accounting System',
     version: '1.0.0',
     database: dbStatus,
+    databaseError: dbError,
     environment: process.env.NODE_ENV || 'development',
-    mongoUri: process.env.MONGODB_URI ? 'Set' : 'Not set'
+    mongoUri: process.env.MONGODB_URI ? 'Set' : 'Not set',
+    mongoUriPreview: process.env.MONGODB_URI ? process.env.MONGODB_URI.substring(0, 50) + '...' : 'Not set'
   });
 });
 
@@ -159,6 +163,24 @@ const connectDB = async () => {
     console.log(`📊 Database: ${conn.connection.name}`);
   } catch (error) {
     console.error('❌ Database connection error:', error.message);
+    
+    // Provide specific error guidance
+    if (error.message.includes('ENOTFOUND')) {
+      console.log('🔍 DNS Resolution Error - Possible causes:');
+      console.log('  - MongoDB cluster hostname is incorrect');
+      console.log('  - Cluster may have been deleted or doesn\'t exist');
+      console.log('  - Network connectivity issues');
+      console.log('  - Check your MongoDB Atlas cluster status');
+    } else if (error.message.includes('authentication failed')) {
+      console.log('🔍 Authentication Error - Check:');
+      console.log('  - Username and password in connection string');
+      console.log('  - Database user permissions');
+    } else if (error.message.includes('IP not whitelisted')) {
+      console.log('🔍 Network Access Error - Check:');
+      console.log('  - MongoDB Atlas Network Access settings');
+      console.log('  - Add 0.0.0.0/0 to allow all IPs');
+    }
+    
     console.log('🔄 Retrying connection in 10 seconds...');
     setTimeout(connectDB, 10000);
   }
