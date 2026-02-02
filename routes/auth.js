@@ -69,24 +69,47 @@ router.post('/login', [
   body('password').exists().withMessage('Password is required')
 ], async (req, res) => {
   try {
+    console.log('🔍 LOGIN ATTEMPT:', {
+      email: req.body.email,
+      hasPassword: !!req.body.password,
+      timestamp: new Date().toISOString()
+    });
+
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
+      console.log('❌ VALIDATION ERRORS:', errors.array());
       return res.status(400).json({ errors: errors.array() });
     }
 
     const { email, password } = req.body;
 
     // Check if user exists and is active
+    console.log('🔍 SEARCHING FOR USER:', email);
     const user = await User.findOne({ email, isActive: true });
+    
     if (!user) {
+      console.log('❌ USER NOT FOUND OR INACTIVE');
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
+    console.log('✅ USER FOUND:', {
+      email: user.email,
+      username: user.username,
+      role: user.role,
+      isActive: user.isActive
+    });
+
     // Check password
+    console.log('🔍 COMPARING PASSWORD...');
     const isMatch = await user.comparePassword(password);
+    console.log('🔑 PASSWORD MATCH:', isMatch);
+    
     if (!isMatch) {
+      console.log('❌ PASSWORD MISMATCH');
       return res.status(400).json({ message: 'Invalid credentials' });
     }
+
+    console.log('✅ LOGIN SUCCESSFUL');
 
     // Update last login
     await user.updateLastLogin();
@@ -102,6 +125,8 @@ router.post('/login', [
       { expiresIn: process.env.JWT_EXPIRES_IN || '8h' }
     );
 
+    console.log('✅ TOKEN GENERATED');
+
     res.json({
       token,
       user: {
@@ -116,6 +141,7 @@ router.post('/login', [
       expiresIn: process.env.JWT_EXPIRES_IN || '8h'
     });
   } catch (error) {
+    console.error('❌ LOGIN ERROR:', error);
     res.status(500).json({ message: error.message });
   }
 });
