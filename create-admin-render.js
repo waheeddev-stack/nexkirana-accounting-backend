@@ -35,10 +35,7 @@ async function createAdminUser() {
       maxPoolSize: 10,
       serverSelectionTimeoutMS: 30000,
       socketTimeoutMS: 45000,
-      bufferCommands: false,
-      bufferMaxEntries: 0,
-      useNewUrlParser: true,
-      useUnifiedTopology: true
+      bufferCommands: false
     });
 
     console.log('✅ Connected to MongoDB');
