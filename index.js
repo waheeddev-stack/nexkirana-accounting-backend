@@ -75,6 +75,20 @@ app.use((req, res, next) => {
   next();
 });
 
+// Pre-route method validation for API endpoints
+app.use('/api/*', (req, res, next) => {
+  const allowedMethods = ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'HEAD', 'PATCH'];
+  if (!allowedMethods.includes(req.method)) {
+    return res.status(405).json({
+      message: `Method ${req.method} not allowed on API endpoints`,
+      allowedMethods: allowedMethods,
+      endpoint: req.originalUrl,
+      timestamp: new Date().toISOString()
+    });
+  }
+  next();
+});
+
 // Routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/companies', require('./routes/companies'));
