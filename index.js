@@ -151,15 +151,19 @@ const connectDB = async () => {
     
     const conn = await mongoose.connect(process.env.MONGODB_URI, {
       maxPoolSize: 10,
-      serverSelectionTimeoutMS: 10000,
+      serverSelectionTimeoutMS: 30000, // Increased timeout for Render
       socketTimeoutMS: 45000,
+      bufferCommands: false, // Disable mongoose buffering
+      bufferMaxEntries: 0, // Disable mongoose buffering
+      useNewUrlParser: true,
+      useUnifiedTopology: true
     });
     console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
     console.log(`📊 Database: ${conn.connection.name}`);
   } catch (error) {
     console.error('❌ Database connection error:', error.message);
-    console.log('🔄 Retrying connection in 5 seconds...');
-    setTimeout(connectDB, 5000);
+    console.log('🔄 Retrying connection in 10 seconds...');
+    setTimeout(connectDB, 10000);
   }
 };
 
