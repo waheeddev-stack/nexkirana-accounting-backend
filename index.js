@@ -102,9 +102,6 @@ app.use('/api/vouchers', require('./routes/vouchers'));
 app.use('/api/reports', require('./routes/reports'));
 app.use('/api/users', require('./routes/users'));
 
-// Temporary password debug endpoint (REMOVE AFTER FIXING)
-app.use('/api/debug', require('./password-debug-endpoint'));
-
 // Production admin setup endpoint
 app.get('/api/setup-admin', async (req, res) => {
   try {
