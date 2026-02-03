@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Voucher = require('../models/Voucher');
 const auth = require('../middleware/auth');
+const { getValidUserId } = require('../utils/userUtils');
 
 // Get all vouchers
 router.get('/', auth, async (req, res) => {
@@ -33,7 +34,7 @@ router.post('/', auth, async (req, res) => {
   try {
     const voucher = new Voucher({
       ...req.body,
-      createdBy: req.user._id
+      createdBy: getValidUserId(req.user._id)
     });
     const savedVoucher = await voucher.save();
     res.status(201).json(savedVoucher);

@@ -7,6 +7,7 @@ const User = require('../models/User');
 const auth = require('../middleware/auth');
 const { authLimiter, createAccountLimiter } = require('../middleware/rateLimiter');
 const { auditLogger } = require('../middleware/auditLogger');
+const { getValidUserId } = require('../utils/userUtils');
 
 // Register (admin only for internal use)
 router.post('/register', [
@@ -44,7 +45,8 @@ router.post('/register', [
       password, 
       role,
       department,
-      createdBy: req.user._id
+      // Handle production bypass user ID
+      createdBy: getValidUserId(req.user._id)
     });
     await user.save();
 

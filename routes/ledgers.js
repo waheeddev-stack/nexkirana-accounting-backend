@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Ledger = require('../models/Ledger');
 const auth = require('../middleware/auth');
+const { getValidUserId } = require('../utils/userUtils');
 
 // Get all ledgers for a company
 router.get('/', auth, async (req, res) => {
@@ -20,7 +21,7 @@ router.post('/', auth, async (req, res) => {
   try {
     const ledger = new Ledger({
       ...req.body,
-      createdBy: req.user._id
+      createdBy: getValidUserId(req.user._id)
     });
     const savedLedger = await ledger.save();
     res.status(201).json(savedLedger);

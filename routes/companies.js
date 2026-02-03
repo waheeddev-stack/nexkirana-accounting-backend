@@ -3,6 +3,7 @@ const router = express.Router();
 const Company = require('../models/Company');
 const auth = require('../middleware/auth');
 const adminOnly = require('../middleware/adminOnly');
+const { getValidUserId } = require('../utils/userUtils');
 
 // Get all companies (all authenticated users can view)
 router.get('/', auth, async (req, res) => {
@@ -21,7 +22,7 @@ router.post('/', auth, adminOnly, async (req, res) => {
   try {
     const company = new Company({
       ...req.body,
-      createdBy: req.user._id
+      createdBy: getValidUserId(req.user._id)
     });
     const savedCompany = await company.save();
     
@@ -100,7 +101,7 @@ router.delete('/:id', auth, adminOnly, async (req, res) => {
       { 
         isActive: false,
         deletedAt: new Date(),
-        deletedBy: req.user._id
+        deletedBy: getValidUserId(req.user._id)
       },
       { new: true }
     );

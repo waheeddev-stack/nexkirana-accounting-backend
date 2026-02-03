@@ -5,6 +5,7 @@ const { body, validationResult } = require('express-validator');
 const User = require('../models/User');
 const auth = require('../middleware/auth');
 const { auditLogger } = require('../middleware/auditLogger');
+const { getValidUserId } = require('../utils/userUtils');
 
 // Get all users (admin only)
 router.get('/', auth, async (req, res) => {
@@ -86,7 +87,7 @@ router.post('/', [
       role, 
       department,
       permissions: permissions || defaultPermissions,
-      createdBy: req.user._id
+      createdBy: getValidUserId(req.user._id)
     });
     
     await user.save();
