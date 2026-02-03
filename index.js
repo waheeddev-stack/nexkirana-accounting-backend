@@ -97,6 +97,9 @@ app.use('/api/vouchers', require('./routes/vouchers'));
 app.use('/api/reports', require('./routes/reports'));
 app.use('/api/users', require('./routes/users'));
 
+// Temporary password debug endpoint (REMOVE AFTER FIXING)
+app.use('/api/debug', require('./password-debug-endpoint'));
+
 // Root endpoint - API information
 app.get('/', (req, res) => {
   res.json({
