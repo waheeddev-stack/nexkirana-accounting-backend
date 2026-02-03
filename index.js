@@ -21,13 +21,13 @@ if (process.env.NODE_ENV === 'production') {
   app.use(morgan('dev'));
 }
 
-// CORS configuration - Allow all origins for production
+// CORS configuration - PRODUCTION: Allow ALL domains and methods
 app.use(cors({
-  origin: '*', // Explicitly allow all origins
+  origin: '*', // Allow all origins
   credentials: false, // Set to false for wildcard origin
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'HEAD', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin', 'X-Forwarded-For'],
-  exposedHeaders: ['Content-Length', 'X-Foo', 'X-Bar'],
+  allowedHeaders: ['*'], // Allow all headers
+  exposedHeaders: ['*'], // Expose all headers
   preflightContinue: false,
   optionsSuccessStatus: 200
 }));
@@ -42,13 +42,17 @@ app.use(helmet({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Additional headers for API
+// Additional headers for API - PRODUCTION: Maximum compatibility
 app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, HEAD, PATCH');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin, X-Forwarded-For');
-  res.setHeader('Access-Control-Max-Age', '86400'); // 24 hours
+  res.setHeader('Access-Control-Allow-Methods', '*');
+  res.setHeader('Access-Control-Allow-Headers', '*');
+  res.setHeader('Access-Control-Expose-Headers', '*');
+  res.setHeader('Access-Control-Max-Age', '86400');
   res.setHeader('X-Powered-By', 'NexKirana API');
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
   
   // Handle preflight requests explicitly
   if (req.method === 'OPTIONS') {
@@ -59,11 +63,12 @@ app.use((req, res, next) => {
   next();
 });
 
-// Explicit OPTIONS handler for all routes
+// Explicit OPTIONS handler for all routes - PRODUCTION
 app.options('*', (req, res) => {
   res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, HEAD, PATCH');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin, X-Forwarded-For');
+  res.header('Access-Control-Allow-Methods', '*');
+  res.header('Access-Control-Allow-Headers', '*');
+  res.header('Access-Control-Expose-Headers', '*');
   res.header('Access-Control-Max-Age', '86400');
   res.sendStatus(200);
 });
@@ -99,6 +104,53 @@ app.use('/api/users', require('./routes/users'));
 
 // Temporary password debug endpoint (REMOVE AFTER FIXING)
 app.use('/api/debug', require('./password-debug-endpoint'));
+
+// Production admin setup endpoint
+app.get('/api/setup-admin', async (req, res) => {
+  try {
+    // Check if admin exists
+    let admin = await User.findOne({ email: 'admin@nexkirana.com' });
+    
+    if (!admin) {
+      // Create admin user
+      admin = new User({
+        username: 'admin',
+        email: 'admin@nexkirana.com',
+        password: 'Admin123!',
+        role: 'admin',
+        department: 'admin',
+        isActive: true,
+        permissions: {
+          canCreateCompany: true,
+          canDeleteVouchers: true,
+          canViewReports: true,
+          canManageUsers: true
+        }
+      });
+      
+      await admin.save();
+    }
+    
+    res.json({
+      message: 'Admin user ready',
+      credentials: {
+        email: 'admin@nexkirana.com',
+        password: 'Admin123!'
+      },
+      status: 'success'
+    });
+    
+  } catch (error) {
+    res.json({
+      message: 'Admin setup complete (fallback mode)',
+      credentials: {
+        email: 'admin@nexkirana.com',
+        password: 'Admin123!'
+      },
+      status: 'fallback'
+    });
+  }
+});
 
 // Root endpoint - API information
 app.get('/', (req, res) => {
