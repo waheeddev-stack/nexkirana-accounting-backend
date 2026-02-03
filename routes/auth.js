@@ -9,6 +9,21 @@ const { authLimiter, createAccountLimiter } = require('../middleware/rateLimiter
 const { auditLogger } = require('../middleware/auditLogger');
 const { getValidUserId } = require('../utils/userUtils');
 
+// Test endpoint for debugging
+router.post('/test', (req, res) => {
+  console.log('🧪 TEST ENDPOINT HIT');
+  console.log('Request body:', JSON.stringify(req.body, null, 2));
+  console.log('Request headers:', JSON.stringify(req.headers, null, 2));
+  
+  res.json({
+    message: 'Test endpoint working',
+    receivedBody: req.body,
+    bodyType: typeof req.body,
+    bodyKeys: Object.keys(req.body || {}),
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Register (admin only for internal use)
 router.post('/register', [
   body('username').trim().isLength({ min: 3 }).withMessage('Username must be at least 3 characters'),
@@ -17,23 +32,45 @@ router.post('/register', [
 ], async (req, res) => {
   try {
     console.log('🔍 PRODUCTION REGISTER ATTEMPT');
-    console.log('Request body:', req.body);
+    console.log('Request body:', JSON.stringify(req.body, null, 2));
+    console.log('Request headers:', JSON.stringify(req.headers, null, 2));
+
+    // Validate input exists
+    if (!req.body || Object.keys(req.body).length === 0) {
+      console.log('❌ Empty request body');
+      return res.status(400).json({ message: 'Request body is required' });
+    }
 
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
+      console.log('❌ Validation errors:', errors.array());
+      return res.status(400).json({ 
+        message: 'Validation failed',
+        errors: errors.array() 
+      });
     }
 
     const { username, email, password, role = 'user', department = 'accounts' } = req.body;
 
-    // Check if user exists
-    const existingUser = await User.findOne({ 
-      $or: [{ email }, { username }] 
-    });
+    console.log('✅ Validation passed, checking for existing user...');
+
+    // Check if user exists (with database error handling)
+    let existingUser;
+    try {
+      existingUser = await User.findOne({ 
+        $or: [{ email }, { username }] 
+      });
+    } catch (dbError) {
+      console.log('⚠️ Database error during user lookup:', dbError.message);
+      // Continue with registration if database check fails
+    }
     
     if (existingUser) {
+      console.log('❌ User already exists:', existingUser.email);
       return res.status(400).json({ message: 'User already exists' });
     }
+
+    console.log('✅ User does not exist, creating new user...');
 
     // Create user with production bypass for createdBy
     const user = new User({ 
@@ -45,7 +82,10 @@ router.post('/register', [
       // Use null for production bypass
       createdBy: null
     });
+    
+    console.log('✅ User object created, saving to database...');
     await user.save();
+    console.log('✅ User saved successfully:', user._id);
 
     res.status(201).json({
       message: 'User account created successfully',
@@ -59,7 +99,27 @@ router.post('/register', [
     });
   } catch (error) {
     console.error('❌ REGISTER ERROR:', error);
-    res.status(500).json({ message: error.message });
+    console.error('Error stack:', error.stack);
+    
+    // More specific error handling
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({ 
+        message: 'User validation failed',
+        details: error.message 
+      });
+    }
+    
+    if (error.code === 11000) {
+      return res.status(400).json({ 
+        message: 'User already exists (duplicate key)',
+        field: Object.keys(error.keyPattern)[0]
+      });
+    }
+    
+    res.status(500).json({ 
+      message: 'Registration service temporarily unavailable',
+      error: error.message 
+    });
   }
 });
 
