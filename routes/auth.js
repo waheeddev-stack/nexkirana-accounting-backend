@@ -9,6 +9,15 @@ const { authLimiter, createAccountLimiter } = require('../middleware/rateLimiter
 const { auditLogger } = require('../middleware/auditLogger');
 const { getValidUserId } = require('../utils/userUtils');
 
+// Health check endpoint
+router.get('/health', (req, res) => {
+  res.json({
+    status: 'OK',
+    timestamp: new Date().toISOString(),
+    message: 'Auth service is running'
+  });
+});
+
 // Test endpoint for debugging
 router.post('/test', (req, res) => {
   console.log('🧪 TEST ENDPOINT HIT');
@@ -26,19 +35,32 @@ router.post('/test', (req, res) => {
 
 // Register (admin only for internal use)
 router.post('/register', [
-  body('username').trim().isLength({ min: 3 }).withMessage('Username must be at least 3 characters'),
-  body('email').isEmail().withMessage('Please provide a valid email'),
-  body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters')
+  body('username').optional().trim().isLength({ min: 3 }).withMessage('Username must be at least 3 characters'),
+  body('email').optional().isEmail().withMessage('Please provide a valid email'),
+  body('password').optional().isLength({ min: 8 }).withMessage('Password must be at least 8 characters')
 ], async (req, res) => {
   try {
     console.log('🔍 PRODUCTION REGISTER ATTEMPT');
     console.log('Request body:', JSON.stringify(req.body, null, 2));
     console.log('Request headers:', JSON.stringify(req.headers, null, 2));
+    console.log('Content-Type:', req.get('Content-Type'));
 
     // Validate input exists
     if (!req.body || Object.keys(req.body).length === 0) {
       console.log('❌ Empty request body');
       return res.status(400).json({ message: 'Request body is required' });
+    }
+
+    // PRODUCTION BYPASS: Create a test user if validation fails
+    const { username, email, password, role = 'user', department = 'accounts' } = req.body;
+    
+    // Basic validation
+    if (!username || !email || !password) {
+      console.log('❌ Missing required fields:', { username: !!username, email: !!email, password: !!password });
+      return res.status(400).json({ 
+        message: 'Username, email, and password are required',
+        received: { username: !!username, email: !!email, password: !!password }
+      });
     }
 
     const errors = validationResult(req);
@@ -49,8 +71,6 @@ router.post('/register', [
         errors: errors.array() 
       });
     }
-
-    const { username, email, password, role = 'user', department = 'accounts' } = req.body;
 
     console.log('✅ Validation passed, checking for existing user...');
 
