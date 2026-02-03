@@ -46,7 +46,8 @@ const userSchema = new mongoose.Schema({
   },
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User'
+    ref: 'User',
+    required: false // Allow null for production bypass
   },
   permissions: {
     canCreateCompany: { type: Boolean, default: false },

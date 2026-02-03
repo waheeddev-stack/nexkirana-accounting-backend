@@ -46,7 +46,7 @@ const companySchema = new mongoose.Schema({
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true
+    required: false // Allow null for production bypass
   },
   deletedBy: {
     type: mongoose.Schema.Types.ObjectId,
